@@ -12,21 +12,38 @@ library(rlist)
 library('pipeR')
 setwd('C:/Users/zhouq/Documents/R/comfort-index')
 
-get.index<-function(i){
-  date.url<-paste('http://61.155.108.87/jslyzw/front/show/all_show.do?releasenyr=',Sys.Date(),'&releasedate=',sep = '')
-  time<-c('9:30','11:30','13:30','15:30')
-  index.table<- paste(date.url,time[i],sep='') %>% getURL(.encoding="utf-8")  %>% readHTMLTable(stringAsFactors = FALSE)
-  index.list<-list()
-  for(i in 1:4){
-    index.list[[i]]<-list.merge(index.table[[(i-1)*7+4]],index.table[[(i-1)*7+5]]) %>% lapply(as.character)
-    if(length(names(index.list[[i]]))==4){
-      names(index.list[[i]])<-c("Tag",'Name',"Visitor",'index')  
-      index.list[[i]]$Tag<-index.list[[i]]$Tag %>% str_replace('发布时间：','') %>% strsplit('\\s')
+  date.series<- paste('2018-02-',c(15:21),sep = '')
+  date.url<-paste('http://61.155.108.87/jslyzw/front/show/all_show.do?releasenyr=',date.series,'&releasedate=',sep = '')
+  time.series<-c('9:30','11:30','13:30','15:30')
+  time.matrix<-sapply(date.series,paste,time.series)
+  search.url<-sapply(date.url,paste,time.series,sep='') 
+  index.data<-sapply(search.url,getURL,.encoding='utf-8') %>% readHTMLTable(stringAsFactors = FALSE) %>% 
+               list.filter(length(.)>0) %>% list.filter(!'V1' %in% names(.))
+  comfort.index<-list()
+  for (i in 1:length(index.data)){
+    if (length(index.data[[i]])==3){
+      comfort.index[[ceiling(i/2)]]<-list.merge(index.data[[i-1]],index.data[[i]])
+      names(comfort.index[[ceiling(i/2)]])<-c("Tag",'Name',"Visitor",'index')  
+      comfort.index[[ceiling(i/2)]]$index  <- substr(comfort.index[[ceiling(i/2)]]$index,1,1) %>% factor(levels=c('5','4','3','2','1'),labels=c('舒适','较舒适','一般','较拥挤','拥挤'))
+      comfort.index[[ceiling(i/2)]]$Tag    <- comfort.index[[ceiling(i/2)]]$Tag %>% str_replace('发布时间：','') %>% strsplit('\\s')
     }
-     
   }
-  return(index.list)
-}
+
+  comfort.index[[11]]<-data.frame()
+  comfort.index[[11]] <- data.frame(Tag=time.matrix[11%%4,floor(11/4)],Name=NA,Visitor=NA,index=NA)
+  data<-comfort.index
+  list.map(data,Name)
+  x<-list.map(data,Name) %>% list.apply(str_replace,'（4A）|（5A）','') %>% list.apply(str_replace,'）','') %>% list.apply(str_split,'（')
+#clean data to get location
+  list.map(data,Name)
+ui<-comfort.index[[12]]%>% list.skip(1) %>% data.frame() 
+names(data[[12]])
+
+data[[11]]<-as.data.frame(data[[11]],col.names=names(data[[12]]))
+data[[11]]$Tag<-time.matrix[11%%4,floor(11/4)]
+
+data[[11]]$Tag
+list.names(data[[11]])
 p<-get.index()
 jqname_full <- list.cases(p,Name)
 jqname <- list.cases(p,Name) %>% str_replace('（4A）|（5A）','') %>%str_replace('）','') %>% str_split('（')
@@ -49,28 +66,14 @@ keyword<-names(t)
 t<-data.frame(keyword=as.character(names(t)),posi=as.character(t))
 t[1]
 sapply(t,length)
-heritage_Current<-heritage.parsed[[2]]  %>% .[,setdiff(1:ncol(.),c(2,5,7,9))]
-heritage_Previous<-heritage.parsed[[4]] %>% .[,setdiff(1:ncol(.),c(2,5,7,9))]
-heritage_Current$Address<- heritage_Current$Location %>% as.character %>% strsplit(',') %>% sapply('[[',1)
-heritage_Current$lat<- heritage_Current$Location %>% str_extract("-?\\d{1,2}\\.\\d{1,}; -?\\d{1,3}\\.\\d{1,}") %>% strsplit(';') %>% sapply('[[',1) %>% as.numeric()
-heritage_Current$lng<- heritage_Current$Location %>% str_extract("-?\\d{1,2}\\.\\d{1,}; -?\\d{1,3}\\.\\d{1,}") %>% strsplit(';') %>% sapply('[[',2) %>% as.numeric()
-heritage_Current$Criteria<-heritage_Current$Criteria %>% as.character()%>% strsplit(":") %>% sapply("[[",1)
-world_region<-st_read('C:/Users/zhouq/Documents/R/map/world_region.shp')
 
-for(i in 1:dim(heritage_Current)[1]){
- heritage_Current$geo[[i]]<-st_point(c(heritage_Current$lng[i],heritage_Current$lat[i]))
-}
-heritage_Current$geo<-st_sfc(heritage_Current$geo,crs = 4326)
-heritage_Current.sf<-st_sf(heritage_Current)
-p<-ggplot()+geom_sf(data = world_region)+geom_sf(data = heritage_Current.sf,aes(shape=Criteria,fill=Criteria),size=3,colour="red")+ scale_shape_manual(values=c(21,22))+
-  labs(title="世界濒危文化遗产分布图（当前）",caption="数据来源：维基百科")+   
-  theme_void(base_size=15) %+replace%
-  theme(
-    plot.title=element_text(size=25,hjust=0),
-    plot.caption=element_text(hjust=0),       
-    legend.position = c(0.05,0.55),
-    plot.margin = unit(c(1,0,1,0), "cm")
-  )
-t<-ggplot()+geom_point(data=heritage_Current.sf,aes(x=lng,y=lat,shape=Criteria,fill=Criteria),size=3,colour="red")
-p
-t
+x <- list(p1 = list(type='A',score=list(c1=10,c2=8)),
+          p2 = list(type='B',score=list(c1=9,c2=9)),
+          p3 = list(type='B',score=list(c1=9,c2=7)))
+list.order(x, type, (score$c2)) # order by type (ascending) and score$c2 (descending)
+list.order(x, min(score$c1,score$c2))
+list.order(x, min(score$c1,score$c2), keep.names=TRUE)
+list.order(comfort.index,length(.)==0)
+list.first(comfort.index,length(.)<4)
+saveRDS(comfort.index,'SFCI.rds')
+data<-readRDS('SFCI.rds')

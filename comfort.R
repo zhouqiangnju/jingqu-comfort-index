@@ -12,7 +12,8 @@ library(rlist)
 library('pipeR')
 library(leaflet)
 library(RColorBrewer)
-setwd('C:/Users/zhouq/Documents/R/comfort-index')
+
+setwd('F:/Administrator/Documents/GitHub/jingqu-comfort-index')
 #判断当前时间应提取哪一个时间点的舒适度指数表
 time.diff<-function(){
   start.time  <- as.POSIXlt(paste(Sys.Date(),'09:30:00 CST'))
@@ -63,7 +64,7 @@ p                  <- leaflet(index.data) %>%
                          attribution = '&copy; <a href="http://ditu.amap.com/">高德地图</a>',
                          group="Road Map") %>% 
                       setView(index.data$lng[1],index.data$lat[1] ,zoom = 10)%>%
-                      addCircles(color=~pal(index.data$index),weight=25,popup=paste(index.data$Name.y,"<br/>",'人数:',index.data$Visitor,br(),index.data$index,sep=''))%>%
+                      addCircles(color=~pal(index.data$index),weight=25,popup=paste(index.data$Name.y,"<br/>",'人数:',index.data$Visitor,"<br/>",index.data$index,sep=''))%>%
                       addLegend("bottomleft",pal=pal,values=~index,title=paste(index.data$Time[1],'江苏重点景区舒适度'))
 p
 
