@@ -1,3 +1,4 @@
+comfort_index<-function(){
 library("XML")
 library(xml2)
 library("stringr")
@@ -10,11 +11,14 @@ library(jsonlite)
 library(httr)
 library(rlist)
 library('pipeR')
-library(leaflet)
+library('leaflet')
 library(RColorBrewer)
-
-setwd('F:/Administrator/Documents/GitHub/jingqu-comfort-index')
+library(tidyverse)
+ 
+setwd('~/GitHub/jingqu-comfort-index')
+index.order        <- factor(c('1','2','3','4','5'),levels=c('拥挤','较拥挤','一般','较舒适','舒适'),ordered=TRUE)
 #判断当前时间应提取哪一个时间点的舒适度指数表
+
 time.diff<-function(){
   start.time  <- as.POSIXlt(paste(Sys.Date(),'09:30:00 CST'))
   diff        <- difftime(Sys.time(),start.time,units='mins') %>% as.data.frame.difftime() %>% as.numeric()
@@ -38,8 +42,8 @@ get.index<-function(){
   return(index.list)
 }
 #整理舒适度指数表
-index.list          <- get.index()
-index.data          <- index.list %>% list.skip(1) %>% data.frame() 
+index.list          <-get.index()
+index.data          <- get.index()  %>% list.skip(1) %>% data.frame() 
 index.data$Name     <- as.character(index.data$Name)
 index.data$Time     <- paste(index.list$Tag[[1]][1],index.list$Tag[[1]][2])
 keyword.list        <- index.data$Name %>% str_replace('（4A）|（5A）','') %>%str_replace('）','') %>% str_split('（')
@@ -51,12 +55,20 @@ for(j in 1:length(keyword.list)){
   index.data$keyword[j]<- keyword.list[[j]][1]
 }
 
-jqgeo              <- read.csv('jqgeo0217.csv',stringsAsFactors = FALSE)[,c(5,8,9,10,11)]
-index.data$keyword <- sapply(jqgeo$keyword,grep,index.data$keyword) %>% unlist() %>% sort() %>% names
+jqgeo              <- read.csv('jqgeo2018_new_utf-8_rated.csv',stringsAsFactors = FALSE)[,c(5,6,7,8,9)]
+index.data$keyword <- sapply(jqgeo$keyword,grep,index.data$keyword) %>% unlist() %>% sort() %>% names %>% as.character
 index.data         <- merge(jqgeo,index.data,by='keyword',all=F)
 
-pal                <- colorFactor(brewer.pal(11,'RdYlGn')[c(1,4,7,9,11)],domain = c('拥挤','较拥挤','一般','较舒适','舒适'),ordered=TRUE)
-index.order        <- factor(c('1','2','3','4','5'),levels=c('拥挤','较拥挤','一般','较舒适','舒适'),ordered=TRUE)
+
+
+
+return(index.data)
+}
+
+index.data<-comfort_index()
+
+pal                <- colorFactor(brewer.pal(11,'RdYlGn')[c(1,4,7,9,11)],
+                                  domain = c('拥挤','较拥挤','一般','较舒适','舒适'),ordered=TRUE)
 p                  <- leaflet(index.data) %>%
                       addTiles(
                         'http://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
@@ -65,6 +77,7 @@ p                  <- leaflet(index.data) %>%
                          group="Road Map") %>% 
                       setView(index.data$lng[1],index.data$lat[1] ,zoom = 10)%>%
                       addCircles(color=~pal(index.data$index),weight=25,popup=paste(index.data$Name.y,"<br/>",'人数:',index.data$Visitor,"<br/>",index.data$index,sep=''))%>%
-                      addLegend("bottomleft",pal=pal,values=~index,title=paste(index.data$Time[1],'江苏重点景区舒适度'))
-p
+                      addLegend("bottomleft",pal=pal,values=~index,title=paste(index.data$Time[1],'江苏重点旅游景区舒适度'))
 
+p
+dev.off()
