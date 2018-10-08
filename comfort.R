@@ -12,6 +12,7 @@ library(rlist)
 library('pipeR')
 library(leaflet)
 library(RColorBrewer)
+library(shiny)
 
 setwd('F:/Administrator/Documents/GitHub/jingqu-comfort-index')
 #判断当前时间应提取哪一个时间点的舒适度指数表
